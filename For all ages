@@ -1,0 +1,156 @@
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+canvas.width = 600;
+canvas.height = 400;
+
+// Bowser
+const bowser = {
+  x: 280,
+  y: 330,
+  width: 40,
+  height: 40,
+  speed: 5
+};
+
+// Fireballs
+let bullets = [];
+
+// Enemies
+let enemies = [];
+let score = 0;
+let gameOver = false;
+
+// Controls
+const keys = {};
+
+document.addEventListener("keydown", e => {
+  keys[e.code] = true;
+});
+
+document.addEventListener("keyup", e => {
+  keys[e.code] = false;
+});
+
+// Shoot
+function shoot() {
+  bullets.push({
+    x: bowser.x + bowser.width / 2 - 5,
+    y: bowser.y,
+    width: 10,
+    height: 10,
+    speed: 6
+  });
+}
+
+// Create enemies
+function spawnEnemy() {
+  enemies.push({
+    x: Math.random() * (canvas.width - 40),
+    y: -40,
+    width: 40,
+    height: 40,
+    speed: 2 + Math.random()
+  });
+}
+
+setInterval(() => {
+  if (!gameOver) spawnEnemy();
+}, 1200);
+
+// Update logic
+function update() {
+  if (gameOver) return;
+
+  // Move Bowser
+  if (keys["ArrowLeft"] && bowser.x > 0) bowser.x -= bowser.speed;
+  if (keys["ArrowRight"] && bowser.x < canvas.width - bowser.width)
+    bowser.x += bowser.speed;
+
+  // Shoot (single fire)
+  if (keys["Space"]) {
+    if (!keys.shooting) {
+      shoot();
+      keys.shooting = true;
+    }
+  } else {
+    keys.shooting = false;
+  }
+
+  // Move bullets
+  bullets.forEach(b => (b.y -= b.speed));
+  bullets = bullets.filter(b => b.y + b.height > 0);
+
+  // Move enemies
+  enemies.forEach(e => (e.y += e.speed));
+  enemies = enemies.filter(e => e.y < canvas.height + 50);
+
+  // Bullet vs enemy collision
+  bullets.forEach((b, bi) => {
+    enemies.forEach((e, ei) => {
+      if (
+        b.x < e.x + e.width &&
+        b.x + b.width > e.x &&
+        b.y < e.y + e.height &&
+        b.y + b.height > e.y
+      ) {
+        bullets.splice(bi, 1);
+        enemies.splice(ei, 1);
+        score++;
+      }
+    });
+  });
+
+  // Enemy hits Bowser → GAME OVER
+  enemies.forEach(e => {
+    if (
+      bowser.x < e.x + e.width &&
+      bowser.x + bowser.width > e.x &&
+      bowser.y < e.y + e.height &&
+      bowser.y + bowser.height > e.y
+    ) {
+      gameOver = true;
+    }
+  });
+}
+
+// Draw
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Bowser
+  ctx.fillStyle = "green";
+  ctx.fillRect(bowser.x, bowser.y, bowser.width, bowser.height);
+
+  // Fireballs
+  ctx.fillStyle = "orange";
+  bullets.forEach(b =>
+    ctx.fillRect(b.x, b.y, b.width, b.height)
+  );
+
+  // Enemies
+  ctx.fillStyle = "red";
+  enemies.forEach(e =>
+    ctx.fillRect(e.x, e.y, e.width, e.height)
+  );
+
+  // Score
+  ctx.fillStyle = "white";
+  ctx.font = "16px Arial";
+  ctx.fillText("Score: " + score, 10, 20);
+
+  if (gameOver) {
+    ctx.fillStyle = "white";
+    ctx.font = "32px Arial";
+    ctx.fillText("GAME OVER", 200, 200);
+  }
+}
+
+// Main loop
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
